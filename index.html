@@ -1,52 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="ro">
 <head>
-  <meta charset="UTF-8">
-  <title>Bet AI Agent</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bet AI Agent - Top Elită</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #111827, #1e3a8a);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 15px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      background: rgba(15,23,42,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .stat-label {
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+
+    .stat-value {
+      margin-top: 8px;
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 21px;
+    }
+
+    .banner {
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .banner-stop {
+      background: rgba(239,68,68,0.16);
+      color: #fecaca;
+      border: 1px solid rgba(239,68,68,0.35);
+    }
+
+    .banner-play {
+      background: rgba(34,197,94,0.16);
+      color: #bbf7d0;
+      border: 1px solid rgba(34,197,94,0.35);
+    }
+
+    .warning {
+      background: rgba(250,204,21,0.12);
+      color: #fde68a;
+      border: 1px solid rgba(250,204,21,0.25);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .pick {
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .match {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .league {
+      color: #cbd5e1;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .blue { background: rgba(59,130,246,0.18); color: #93c5fd; }
+    .green { background: rgba(34,197,94,0.18); color: #86efac; }
+    .yellow { background: rgba(250,204,21,0.18); color: #fde68a; }
+    .red { background: rgba(239,68,68,0.18); color: #fca5a5; }
+    .gray { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+    .purple { background: rgba(168,85,247,0.18); color: #d8b4fe; }
+
+    .meta {
+      color: #cbd5e1;
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .empty {
+      color: #94a3b8;
+      padding: 12px 0;
+    }
+
+    .loading, .error {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .error {
+      background: rgba(239,68,68,0.15);
+      color: #fecaca;
+      border-color: rgba(239,68,68,0.3);
+    }
+
+    .section-sub {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: -8px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .stats { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
+    }
+  </style>
 </head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>⚽ Bet AI Agent — TOP ELITĂ</h1>
+      <p>Selecții automate · Safe / Aggressive · Warnings · Smart Block · Top 1 / Top 3 / Top 5</p>
 
-<body style="font-family:sans-serif;background:#0f172a;color:white;padding:20px">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Status zi</div>
+          <div class="stat-value" id="statusDay">...</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Safe Picks</div>
+          <div class="stat-value" id="safeCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Aggressive Picks</div>
+          <div class="stat-value" id="aggrCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Ticket recomandat</div>
+          <div class="stat-value" id="ticketSize">-</div>
+        </div>
+      </div>
+    </div>
 
-<h2>⚽ Bet AI Agent</h2>
+    <div id="app" class="loading">Se încarcă agentul...</div>
+  </div>
 
-<div id="top"></div>
-<div id="matches">Loading...</div>
-
-<script>
-const API_KEY = "70af1e6d704b7fcaa8d60aa590281b03";
-
-async function loadMatches(){
-  const res = await fetch("https://v3.football.api-sports.io/fixtures?next=20",{
-    headers:{"x-apisports-key":"70af1e6d704b7fcaa8d60aa590281b03"}
-  });
-
-  const data = await res.json();
-  let html = "";
-  let bestMatch = null;
-
-  data.response.forEach(m=>{
-    let homeGoals = m.teams.home.winner === true ? 2 : 1;
-    let awayGoals = m.teams.away.winner === true ? 2 : 1;
-
-    let total = homeGoals + awayGoals;
-
-    let prediction = "Over 1.5";
-    let confidence = 80;
-
-    if(total >= 3){
-      prediction = "Over 2.5";
-      confidence = 85;
+  <script>
+    function riskClass(risk) {
+      if (risk === "LOW") return "green";
+      if (risk === "MEDIUM") return "yellow";
+      return "red";
     }
 
-    if(Math.random() > 0.7){
-      prediction = "BTTS";
-      confidence = 83;
+    function typeClass(type) {
+      return type === "SAFE" ? "green" : "purple";
     }
 
-    if(!bestMatch || confidence > bestMatch.confidence){
-      bestMatch = {
-        text: `${m.teams.home.name} vs ${m.teams.away.name}`,
-        prediction,
-        confidence
-      };
+    function renderPick(pick) {
+      if (!pick) return '<div class="empty">Nu există selecție.</div>';
+
+      return `
+        <div class="pick">
+          <div class="match">${pick.match || "-"}</div>
+          <div class="league">${pick.league || "-"}</div>
+
+          <div class="row">
+            <span class="badge blue">${pick.market || "-"}</span>
+            <span class="badge ${typeClass(pick.type || "SAFE")}">${pick.type || "-"}</span>
+            <span class="badge ${riskClass(pick.risk || "HIGH")}">${pick.risk || "-"}</span>
+            <span class="badge gray">Confidence ${pick.confidence || 0}%</span>
+          </div>
+
+          <div class="meta">
+            <div><b>Projected goals:</b> ${pick.projectedGoals ?? "-"}</div>
+            <div><b>Winner model:</b> ${pick.winnerName || "-"}</div>
+            <div><b>Reason:</b> ${pick.reason || "-"}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderList(list) {
+      if (!list || !list.length) {
+        return '<div class="empty">Nu există selecții aici.</div>';
+      }
+      return list.map(renderPick).join("");
+    }
+
+    async function loadAgent() {
+      const app = document.getElementById("app");
+
+      try {
+        const res = await fetch("/api/matches");
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          app.className = "error";
+          app.innerHTML = `Eroare agent: ${data.details || data.error || "necunoscută"}`;
+          return;
+        }
+
+        document.getElementById("statusDay").textContent = data.smartBlock ? "STOP" : "PLAY";
+        document.getElementById("safeCount").textContent = data.safePicks?.length || 0;
+        document.getElementById("aggrCount").textContent = data.aggressivePicks?.length || 0;
+        document.getElementById("ticketSize").textContent = data.recommendedTicketSize || "-";
+
+        let html = "";
+
+        html += data.smartBlock
+          ? `<div class="banner banner-stop">❌ SMART BLOCK ACTIV — nu sunt suficiente selecții elite safe azi.</div>`
+          : `<div class="banner banner-play">✅ ZI JUCABILĂ — agentul a găsit selecții utilizabile.</div>`;
+
+        if (data.warnings && data.warnings.length) {
+          html += `<div class="card">
+            <h2>⚠ Warnings</h2>
+            ${data.warnings.map(w => `<div class="warning">${w}</div>`).join("")}
+          </div>`;
+        }
+
+        html += `
+          <div class="grid">
+            <div>
+              <div class="card">
+                <h2>🥇 Top 1</h2>
+                <div class="section-sub">Cea mai bună selecție disponibilă acum</div>
+                ${renderPick(data.top1)}
+              </div>
+
+              <div class="card">
+                <h2>🎯 Top 3</h2>
+                <div class="section-sub">Cele mai bune 3 selecții pentru ziua curentă</div>
+                ${renderList(data.top3)}
+              </div>
+
+              <div class="card">
+                <h2>🔥 Top 5</h2>
+                <div class="section-sub">Shortlist extins pentru selecție manuală</div>
+                ${renderList(data.top5)}
+              </div>
+            </div>
+
+            <div>
+              <div class="card">
+                <h2>📌 Mărime bilet recomandată</h2>
+                <div class="pick">
+                  <div class="match">${data.recommendedTicketSize || "-"}</div>
+                  <div class="meta">
+                    Ține disciplina. Nu supraîncărca biletul.
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h2>🟢 Safe Picks</h2>
+                <div class="section-sub">Selecții mai disciplinate</div>
+                ${renderList(data.safePicks)}
+              </div>
+
+              <div class="card">
+                <h2>🟣 Aggressive / Sniper</h2>
+                <div class="section-sub">HT/FT și selecții mai agresive</div>
+                ${renderList(data.aggressivePicks)}
+              </div>
+            </div>
+          </div>
+        `;
+
+        app.className = "";
+        app.innerHTML = html;
+
+      } catch (err) {
+        app.className = "error";
+        app.innerHTML = `Eroare la încărcare: ${err.message}`;
+      }
+    }
+
+    loadAgent();
+  </script>
+</body>
+</html>
