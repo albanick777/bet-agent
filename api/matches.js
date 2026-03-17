@@ -254,7 +254,9 @@ export default async function handler(req, res) {
       recommendedTicketSize = "3-5 meciuri";
     }
 
-    return res.status(200).json({
+  
+}
+  return res.status(200).json({
       smartBlock: safePicks.filter((p) => p.confidence >= 80).length < 2,
       warnings,
       recommendedTicketSize,
@@ -270,4 +272,23 @@ export default async function handler(req, res) {
       details: error.message,
     });
   }
+}
+}
+async function sendToTelegram(message) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: message,
+      parse_mode: "HTML",
+    }),
+  });
 }
