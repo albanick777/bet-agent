@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bet AI Agent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="font-family:sans-serif;background:#0f172a;color:white;padding:20px">
+
+<h2>⚽ Bet AI Agent</h2>
+
+<div id="top"></div>
+<div id="matches">Loading...</div>
+
+<script>
+const API_KEY = "70af1e6d704b7fcaa8d60aa590281b03";
+
+async function loadMatches(){
+  const res = await fetch("https://v3.football.api-sports.io/fixtures?next=20",{
+    headers:{"x-apisports-key":"70af1e6d704b7fcaa8d60aa590281b03"}
+  });
+
+  const data = await res.json();
+  let html = "";
+  let bestMatch = null;
+
+  data.response.forEach(m=>{
+    let homeGoals = m.teams.home.winner === true ? 2 : 1;
+    let awayGoals = m.teams.away.winner === true ? 2 : 1;
+
+    let total = homeGoals + awayGoals;
+
+    let prediction = "Over 1.5";
+    let confidence = 80;
+
+    if(total >= 3){
+      prediction = "Over 2.5";
+      confidence = 85;
+    }
+
+    if(Math.random() > 0.7){
+      prediction = "BTTS";
+      confidence = 83;
+    }
+
+    if(!bestMatch || confidence > bestMatch.confidence){
+      bestMatch = {
+        text: `${m.teams.home.name} vs ${m.teams.away.name}`,
+        prediction,
+        confidence
+      };
