@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     const API_KEY = process.env.API_FOOTBALL_KEY;
 
@@ -430,4 +430,4 @@ module.exports = async function handler(req, res) {
       message: err.message
     });
   }
-};
+}
