@@ -1,25 +1,14 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const API_KEY = process.env.API_FOOTBALL_KEY;
 
-    const response = await fetch("https://v3.football.api-sports.io/fixtures?next=20", {
+    const response = await fetch("https://v3.football.api-sports.io/fixtures?next=10", {
       headers: {
         "x-apisports-key": API_KEY
       }
     });
 
-    const raw = await response.text();
-
-    // protecție dacă API dă eroare HTML
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return res.status(500).json({
-        error: "API FOOTBALL ERROR",
-        details: raw.slice(0, 200)
-      });
-    }
+    const data = await response.json();
 
     const fixtures = data.response || [];
 
@@ -32,10 +21,10 @@ export default async function handler(req, res) {
       risk: "LOW",
       projectedGoals: 2,
       winnerName: f.teams.home.name,
-      reason: "Basic model fallback"
+      reason: "Fallback model"
     }));
 
-    return res.status(200).json({
+  return res.status(200).json({
       smartBlock: false,
       top1: picks[0] || null,
       top3: picks.slice(0, 3),
@@ -49,9 +38,8 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    return res.status(500).json({
-      error: "SERVER ERROR",
-      message: err.message
+   return res.status(500).json({
+      error: err.message
     });
   }
-}
+};
