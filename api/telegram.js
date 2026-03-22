@@ -14,11 +14,14 @@ export default async function handler(req, res) {
       : `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
     const dataRes = await fetch(`${baseUrl}/api/matches?lang=ro`);
-    if (!dataRes.ok) {
-      throw new Error(`Matches API failed: ${dataRes.status}`);
-    }
-
     const data = await dataRes.json();
+
+    if (!dataRes.ok) {
+      return res.status(500).json({
+        error: `Matches API failed: ${dataRes.status}`,
+        details: data
+      });
+    }
 
     if (!data || data.status !== "OK") {
       return res.status(500).json({ error: "NO DATA" });
@@ -26,57 +29,57 @@ export default async function handler(req, res) {
 
     function formatPick(p) {
       if (!p) return "-";
-      return `• ${p.match}\n   ${p.market} | ${p.confidence}% | ${p.risk}`;
+      return `- ${p.match}\n  ${p.market} | ${p.confidence}% | ${p.risk}`;
     }
 
     let message = "";
 
-    message += `⚽ *ELITE BET AGENT V5*\n`;
-    message += `📅 ${data.date}\n`;
-    message += `🕒 UTC: ${data.hourUTC}\n`;
-    message += `📌 *${data.statusZi}*\n\n`;
+    message += `ELITE BET AGENT V5\n`;
+    message += `${data.date}\n`;
+    message += `UTC: ${data.hourUTC}\n`;
+    message += `${data.statusZi}\n\n`;
 
-    message += `🏅 *TOP 1*\n${formatPick(data.top1)}\n\n`;
+    message += `TOP 1\n${formatPick(data.top1)}\n\n`;
 
-    message += `🎯 *TOP 3*\n`;
+    message += `TOP 3\n`;
     (data.top3 || []).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `🟢 *SAFE PICKS*\n`;
+    message += `SAFE PICKS\n`;
     (data.safePicks || []).slice(0, 5).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `💎 *VALUE PICKS*\n`;
+    message += `VALUE PICKS\n`;
     (data.valuePicks || []).slice(0, 5).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `🔵 *HT/FT PICKS*\n`;
+    message += `HT/FT PICKS\n`;
     (data.htftPicks || []).slice(0, 5).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `📐 *CORNERS PICKS*\n`;
+    message += `CORNERS PICKS\n`;
     (data.cornersPicks || []).slice(0, 5).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `⏱ *TIMING PICKS*\n`;
+    message += `TIMING PICKS\n`;
     (data.timingPicks || []).slice(0, 5).forEach((p) => {
       message += `${formatPick(p)}\n`;
     });
     message += `\n`;
 
-    message += `👀 *TRACKED MATCHES*\n`;
+    message += `TRACKED MATCHES\n`;
     (data.trackedTeams || []).slice(0, 10).forEach((t) => {
-      message += `• ${t.home} vs ${t.away} (${t.league})\n`;
+      message += `- ${t.home} vs ${t.away} (${t.league})\n`;
     });
 
     if (message.length > 3900) {
@@ -90,15 +93,17 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: message,
-        parse_mode: "Markdown"
+        text: message
       })
     });
 
     const tgJson = await tgRes.json();
 
     if (!tgRes.ok || !tgJson.ok) {
-      throw new Error(tgJson.description || "Telegram send failed");
+      return res.status(500).json({
+        error: tgJson.description || "Telegram send failed",
+        telegram_response: tgJson
+      });
     }
 
     return res.status(200).json({
