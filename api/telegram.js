@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 const vipData = await check.json();
 
 if (vipData.access === "BLOCKED") {
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`
+await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
