@@ -1,12 +1,18 @@
 import { buildEliteReport } from "../lib/buildReport.js";
-import fetch from "node-fetch";
+
 
 export default async function handler(req, res) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
-    const check = await fetch(`https://bet-agent-best-git-main-nickys-projects-cd54cb04.vercel.app/api/vip?user=${chatId}`);
-const vipData = await check.json();
+ let vipData = { access: "FREE" };
+
+try {
+  const check = await fetch(`https://bet-agent-best-git-main-nickys-projects-cd54cb04.vercel.app/api/vip?user=${chatId}`);
+  vipData = await check.json();
+} catch (e) {
+  console.log("VIP check failed", e);
+}
 
 if (vipData.access === "BLOCKED") {
 await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { 
