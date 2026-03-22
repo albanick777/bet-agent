@@ -1,9 +1,25 @@
 import { buildEliteReport } from "../lib/buildReport.js";
+import fetch from "node-fetch";
 
 export default async function handler(req, res) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
+    const check = await fetch(`https://bet-agent-best-git-main-nickys-projects-cd54cb04.vercel.app/api/vip?user=${chatId}`);
+const vipData = await check.json();
+
+if (vipData.access === "BLOCKED") {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: "⛔ Acces expirat.\nScrie VIP pentru upgrade."
+    })
+  });
+
+  return res.json({ blocked: true });
+}
     const apiKey = process.env.API_FOOTBALL_KEY;
 
     if (!token || !chatId) {
