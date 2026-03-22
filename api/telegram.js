@@ -1,7 +1,10 @@
+import { buildEliteReport } from "../lib/buildReport.js";
+
 export default async function handler(req, res) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
+    const apiKey = process.env.API_FOOTBALL_KEY;
 
     if (!token || !chatId) {
       return res.status(500).json({
@@ -9,40 +12,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const baseUrl = "https://bet-agent-best-git-main-nickys-projects-cd54cb04.vercel.app";
-
-    const dataRes = await fetch(`${baseUrl}/api/matches?lang=ro`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
-
-    const rawText = await dataRes.text();
-
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      return res.status(500).json({
-        error: "Matches did not return JSON",
-        preview: rawText.slice(0, 300)
-      });
-    }
-
-    if (!dataRes.ok) {
-      return res.status(500).json({
-        error: `Matches API failed: ${dataRes.status}`,
-        details: data
-      });
-    }
-
-    if (!data || data.status !== "OK") {
-      return res.status(500).json({
-        error: "NO DATA",
-        details: data
-      });
-    }
+    const data = await buildEliteReport("ro", apiKey);
 
     function formatPick(p) {
       if (!p) return "-";
@@ -52,10 +22,12 @@ export default async function handler(req, res) {
     function addSection(title, picks, limit = 5) {
       let block = `${title}\n`;
       const list = Array.isArray(picks) ? picks.slice(0, limit) : [];
+
       if (!list.length) {
         block += "-\n\n";
         return block;
       }
+
       list.forEach((p) => {
         block += `${formatPick(p)}\n`;
       });
