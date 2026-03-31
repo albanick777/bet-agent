@@ -112,6 +112,22 @@ export default async function handler(req, res) {
     }
 
     message += `\n${sep}\n`;
+   // PATTERN WATCH
+if (Array.isArray(data.patternWatch) && data.patternWatch.length) {
+  message += `${sep}\n\n`;
+  message += `🔬 PATTERN WATCH — TOP 10 ECHIPE\n`;
+  message += `${sep}\n`;
+  data.patternWatch.forEach((t, i) => {
+    message += `\n${i + 1}. ${t.name}\n`;
+    message += `  🏠 Acasă (${t.home.matches} meciuri)\n`;
+    message += `     Win: ${t.home.winPct}% | O2.5: ${t.home.over25Pct}% | BTTS: ${t.home.bttsPct}%\n`;
+    message += `     HT/FT: ${t.home.topHtft || "-"} (${t.home.topHtftPct}%) | Gol R2: ${t.home.goalR2Pct}%\n`;
+    message += `  ✈️ Deplasare (${t.away.matches} meciuri)\n`;
+    message += `     Win: ${t.away.winPct}% | O2.5: ${t.away.over25Pct}% | BTTS: ${t.away.bttsPct}%\n`;
+    message += `     HT/FT: ${t.away.topHtft || "-"} (${t.away.topHtftPct}%) | Gol R2: ${t.away.goalR2Pct}%\n`;
+  });
+  message += `\n${sep}\n\n`;
+} 
     message += `🧠 Nu forțăm pariuri. Focus: profit pe termen lung.`;
 
     // Telegram max 4096 chars
