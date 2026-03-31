@@ -1,120 +1,153 @@
-import { buildEliteReport } from "../lib/buildReport.js";
-
+// Trimite raportul principal la 12:00 Georgia (08:00 UTC)
+// Anti-dublare: verifică ora înainte să trimită
 
 export default async function handler(req, res) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
- let vipData = { access: "FREE" };
-
-try {
-  const check = await fetch(`https://bet-agent-best-git-main-nickys-projects-cd54cb04.vercel.app/api/vip?user=${chatId}`);
-  vipData = await check.json();
-} catch (e) {
-  console.log("VIP check failed", e);
-}
-
-if (vipData.access === "BLOCKED") {
-await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { 
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: "⛔ Acces expirat.\nScrie VIP pentru upgrade."
-    })
-  });
-
-  return res.json({ blocked: true });
-}
     const apiKey = process.env.API_FOOTBALL_KEY;
 
-    if (!token || !chatId) {
-      return res.status(500).json({
-        error: "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
+    if (!token || !chatId || !apiKey) {
+      return res.status(500).json({ error: "Missing env vars" });
+    }
+
+    // ── Anti-dublare: acceptăm doar dacă ora UTC e între 07:45 și 08:15
+    // (cron e la 08:00 UTC = 12:00 Georgia)
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMin = now.getUTCMinutes();
+    const totalMin = utcHour * 60 + utcMin;
+    const windowStart = 7 * 60 + 45;  // 07:45 UTC
+    const windowEnd = 8 * 60 + 15;    // 08:15 UTC
+
+    if (req.method === "GET" && req.headers["x-vercel-cron"] !== "1") {
+      // Apel manual — permitem întotdeauna (pentru testare)
+    } else if (totalMin < windowStart || totalMin > windowEnd) {
+      return res.status(200).json({
+        skipped: true,
+        reason: `Outside send window. UTC: ${utcHour}:${String(utcMin).padStart(2, "0")}`
       });
     }
 
     const data = await buildEliteReport("ro", apiKey);
 
     function formatPick(p) {
-      if (!p) return "-";
-      return `• ${p.match}\n${p.market} | ${p.confidence}% | ${p.risk}`;
+      if (!p) return "—";
+      return [
+        `  🏆 ${p.league}`,
+        `  ⚽ ${p.match}`,
+        `  🕒 ${p.kickoff} (Georgia)`,
+        `  📊 ${p.market}`,
+        `  🎯 Confidence: ${p.confidence}%`,
+        `  ⚠️ Risc: ${p.risk}`
+      ].join("\n");
     }
 
-    function addSection(title, picks, limit = 5) {
-      let block = `${title}\n`;
+    function buildSection(title, picks, limit) {
       const list = Array.isArray(picks) ? picks.slice(0, limit) : [];
-
-      if (!list.length) {
-        block += "-\n\n";
-        return block;
-      }
-
-      list.forEach((p) => {
-        block += `${formatPick(p)}\n`;
-      });
-      block += `\n`;
-      return block;
+      if (!list.length) return `${title}\n  —\n`;
+      return `${title}\n${list.map(formatPick).join("\n\n")}\n`;
     }
+
+    const sep = "━━━━━━━━━━━━━━━━━━━━";
 
     let message = "";
+    message += `⚽ ELITE BET AGENT\n`;
+    message += `${sep}\n`;
+    message += `📅 Data: ${data.date}\n`;
+    message += `📌 Ziua: ${data.statusZi}\n`;
+    message += `🔍 Meciuri analizate: ${data.totalMatches}\n`;
+    message += `📦 Picks generate: ${data.totalPicks}\n`;
+    message += `${sep}\n\n`;
 
-    message += `⚽ ELITE BET AGENT V5\n`;
-    message += `📅 ${data.date}\n`;
-    message += `🕒 UTC: ${data.hourUTC}\n`;
-    message += `📌 ${data.statusZi}\n`;
-    message += `🎯 Meciuri analizate: ${data.totalMatches}\n`;
-    message += `📦 Picks totale: ${data.totalPicks}\n\n`;
+    // TOP 1
+    message += `🏅 PICK PREMIUM\n`;
+    message += data.top1 ? formatPick(data.top1) : "  —";
+    message += `\n\n${sep}\n\n`;
 
-    message += `🏅 TOP 1\n${formatPick(data.top1)}\n\n`;
-    message += addSection(`🥇 TOP 3`, data.top3, 3);
-    message += addSection(`🔥 TOP 5`, data.top5, 5);
-    message += addSection(`🟢 SAFE PICKS`, data.safePicks, 5);
-    message += addSection(`💎 VALUE PICKS`, data.valuePicks, 5);
-    message += addSection(`🔵 HT/FT PICKS`, data.htftPicks, 5);
-    message += addSection(`📐 CORNERS PICKS`, data.cornersPicks, 5);
-    message += addSection(`⏱ TIMING PICKS`, data.timingPicks, 5);
+    // TOP 3
+    if (data.top3 && data.top3.length >= 2) {
+      message += buildSection(`🥇 TOP 3 PICKS`, data.top3, 3);
+      message += `${sep}\n\n`;
+    }
 
-    message += `👀 TRACKED MATCHES\n`;
+    // TOP 5
+    if (data.top5 && data.top5.length >= 4) {
+      message += buildSection(`🔥 TOP 5 PICKS`, data.top5, 5);
+      message += `${sep}\n\n`;
+    }
+
+    // SAFE
+    if (data.safePicks && data.safePicks.length) {
+      message += buildSection(`🟢 SAFE PICKS`, data.safePicks, 5);
+      message += `${sep}\n\n`;
+    }
+
+    // VALUE
+    if (data.valuePicks && data.valuePicks.length) {
+      message += buildSection(`💎 VALUE PICKS`, data.valuePicks, 5);
+      message += `${sep}\n\n`;
+    }
+
+    // HTFT
+    if (data.htftPicks && data.htftPicks.length) {
+      message += buildSection(`🔵 HT/FT PICKS`, data.htftPicks, 5);
+      message += `${sep}\n\n`;
+    }
+
+    // TIMING
+    if (data.timingPicks && data.timingPicks.length) {
+      message += buildSection(`⏱ TIMING PICKS`, data.timingPicks, 5);
+      message += `${sep}\n\n`;
+    }
+
+    // MECIURI URMĂRITE
+    message += `👀 MECIURI URMĂRITE\n`;
     if (Array.isArray(data.trackedTeams) && data.trackedTeams.length) {
-      data.trackedTeams.slice(0, 10).forEach((t) => {
-        message += `• ${t.home} vs ${t.away} (${t.league})\n`;
+      data.trackedTeams.slice(0, 8).forEach(t => {
+        message += `  • ${t.home} vs ${t.away} | ${t.league} | 🕒 ${t.kickoff}\n`;
       });
     } else {
-      message += `-\n`;
+      message += `  —\n`;
     }
 
-    if (message.length > 3900) {
-      message = message.slice(0, 3900) + `\n\n...trimmed`;
+    message += `\n${sep}\n`;
+    message += `🧠 Nu forțăm pariuri. Focus: profit pe termen lung.`;
+
+    // Telegram max 4096 chars
+    const chunks = [];
+    let current = "";
+    for (const line of message.split("\n")) {
+      if ((current + "\n" + line).length > 4000) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current += (current ? "\n" : "") + line;
+      }
     }
+    if (current) chunks.push(current);
 
-    const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message
-      })
-    });
-
-    const tgJson = await tgRes.json();
-
-    if (!tgRes.ok || !tgJson.ok) {
-      return res.status(500).json({
-        error: tgJson.description || "Telegram send failed",
-        telegram_response: tgJson
+    for (const chunk of chunks) {
+      const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: chunk })
       });
+      const tgJson = await tgRes.json();
+      if (!tgRes.ok || !tgJson.ok) {
+        return res.status(500).json({
+          error: tgJson.description || "Telegram send failed",
+          telegram_response: tgJson
+        });
+      }
     }
 
-    return res.status(200).json({
-      success: true,
-      telegram: tgJson.result?.message_id || true
-    });
+    return res.status(200).json({ success: true, chunks: chunks.length });
+
   } catch (err) {
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
+
+// Import local
+import { buildEliteReport } from "../lib/buildReport.js";
