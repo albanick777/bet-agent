@@ -1,7 +1,6 @@
 import { buildEliteReport } from "../lib/buildReport.js";
 import { buildNBAReport } from "../lib/buildNBAReport.js";
 
-// Guard anti-duplicat — o singură trimitere per zi
 let lastSentDate = null;
 
 export default async function handler(req, res) {
@@ -17,13 +16,14 @@ export default async function handler(req, res) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
     const apiKey = process.env.API_FOOTBALL_KEY;
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
 
     if (!token || !chatId || !apiKey) {
       return res.status(500).json({ error: "Missing env vars" });
     }
 
     const sep = "━━━━━━━━━━━━━━━━━━━━";
-
     const footballData = await buildEliteReport("ro", apiKey);
     const hasFootball = footballData.top5 && footballData.top5.length > 0;
 
@@ -53,6 +53,22 @@ export default async function handler(req, res) {
         message += `\n${formatPick(p, i)}\n`;
       });
 
+      // ── ACUMULATOR SUGERAT ──────────────────────────────────────────────
+      const acc = footballData.accumulatorSuggestion;
+      if (acc && acc.picks.length >= 2) {
+        message += `\n${sep}\n\n`;
+        message += `🎰 ACUMULATOR SUGERAT\n${sep}\n`;
+        message += `⚠️ Alegerea dvs — analizați înainte de a paria!\n\n`;
+        acc.picks.forEach((p, i) => {
+          message += `${i + 1}. ${p.match}\n`;
+          message += `   📊 ${p.market} | 🎯 ${p.confidence}%\n`;
+        });
+        message += `\n📊 Probabilitate combinată: ${acc.combinedPct}%\n`;
+        message += `💰 Cotă estimată: ${acc.estimatedOdds}x\n`;
+        message += `\n💡 Cu cât mai puține selecții, cu atât mai sigur.\n`;
+      }
+
+      // ── PATTERN WATCH ───────────────────────────────────────────────────
       if (footballData.patternWatch && footballData.patternWatch.length) {
         message += `\n${sep}\n\n`;
         message += `🔬 PATTERN WATCH — JOACĂ AZI\n${sep}\n`;
@@ -60,8 +76,6 @@ export default async function handler(req, res) {
         footballData.patternWatch.forEach(t => {
           const s = t.stats;
           const side = t.isHome ? "🏠 Acasă" : "✈️ Deplasare";
-
-          // ── Concluzie automată ──
           let concluzie = "";
           const outsider = t.isHome ? t.opponent : t.name;
 
@@ -101,7 +115,6 @@ export default async function handler(req, res) {
 
       try {
         const nbaData = await buildNBAReport(apiKey);
-
         if (nbaData.picks && nbaData.picks.length > 0) {
           message += `🏀 NBA TOP PICKS (≥80%)\n${sep}\n`;
           nbaData.picks.forEach((p, i) => {
@@ -112,8 +125,7 @@ export default async function handler(req, res) {
             message += `   ⚠️ Risc: ${p.risk}\n`;
           });
         } else {
-          message += `🏀 NBA\n`;
-          message += `No NBA predictions ≥80% today either.\n`;
+          message += `🏀 NBA\nNo NBA predictions ≥80% today either.\n`;
           message += `📅 Next European football: check back tomorrow.\n`;
         }
       } catch (nbaErr) {
@@ -147,6 +159,31 @@ export default async function handler(req, res) {
       const tgJson = await tgRes.json();
       if (!tgRes.ok || !tgJson.ok) {
         return res.status(500).json({ error: tgJson.description });
+      }
+    }
+
+    // ── SALVARE PICKS ÎN KV ─────────────────────────────────────────────
+    if (kvUrl && kvToken && hasFootball && footballData.top5?.length > 0) {
+      try {
+        const picksToSave = footballData.top5.map(p => ({
+          match: p.match,
+          market: p.market,
+          confidence: p.confidence,
+          kickoffUTC: p.kickoffUTC,
+          league: p.league,
+          fixtureId: p.fixtureId || null
+        }));
+
+        await fetch(`${kvUrl}/set/daily_picks`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${kvToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ value: JSON.stringify(picksToSave), ex: 86400 })
+        });
+      } catch (kvErr) {
+        console.error("KV save error:", kvErr.message);
       }
     }
 
