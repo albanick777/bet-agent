@@ -16,22 +16,23 @@ export default async function handler(req, res) {
     });
     const kvData = await kvRes.json();
 
-   if (!kvData?.result) {
+  if (!kvData?.result) {
   return res.status(200).json({ skipped: true, reason: "No picks saved today" });
 }
 
-return res.status(200).json({ debug: true, raw: kvData });
-
-   let savedPicks;
+let savedPicks;
 try {
-  const parsed = JSON.parse(kvData.result);
-  savedPicks = Array.isArray(parsed) ? parsed : JSON.parse(parsed);
+  const outer = JSON.parse(kvData.result);
+  const inner = typeof outer.value === "string" ? outer.value : JSON.stringify(outer.value);
+  savedPicks = JSON.parse(inner);
+  if (!Array.isArray(savedPicks)) savedPicks = [];
 } catch(e) {
-  return res.status(200).json({ skipped: true, reason: "Invalid picks format", raw: kvData.result });
+  return res.status(200).json({ skipped: true, reason: "Parse error", raw: kvData.result });
 }
+
 if (!savedPicks || savedPicks.length === 0) {
-      return res.status(200).json({ skipped: true, reason: "Empty picks" });
-    }
+  return res.status(200).json({ skipped: true, reason: "Empty picks" });
+} 
 
     const sep = "━━━━━━━━━━━━━━━━━━━━";
     let message = `🔄 CONFIRMARE PICKS — 18:00 Georgia\n${sep}\n\n`;
