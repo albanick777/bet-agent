@@ -16,9 +16,11 @@ export default async function handler(req, res) {
     });
     const kvData = await kvRes.json();
 
-    if (!kvData?.result) {
-      return res.status(200).json({ skipped: true, reason: "No picks saved today" });
-    }
+   if (!kvData?.result) {
+  return res.status(200).json({ skipped: true, reason: "No picks saved today" });
+}
+
+return res.status(200).json({ debug: true, raw: kvData });
 
    let savedPicks;
 try {
