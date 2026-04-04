@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       message += `🔍 Meciuri analizate: ${footballData.totalMatches}\n`;
       message += `${sep}\n\n`;
 
-      message += `🔥 TOP 5 PREDICȚII (≥75%)\n${sep}\n`;
+      message += `🔥 TOP 5 PREDICȚII (≥80%)\n${sep}\n`;
       footballData.top5.forEach((p, i) => {
         message += `\n${formatPick(p, i)}\n`;
       });
