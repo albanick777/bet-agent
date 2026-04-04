@@ -46,7 +46,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: tgJson.description });
     }
 
-    return res.status(200).json({ success: true });
+   return res.status(200).json({ 
+  success: true,
+  totalMatches: data.totalMatches,
+  totalPicks: data.totalPicks,
+  top5Count: data.top5?.length,
+  statusZi: data.statusZi,
+  top5: data.top5
+});
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
