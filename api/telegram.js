@@ -24,7 +24,6 @@ export default async function handler(req, res) {
 
     const sep = "━━━━━━━━━━━━━━━━━━━━";
 
-    // ── FOOTBALL ──────────────────────────────────────────────────────────
     const footballData = await buildEliteReport("ro", apiKey);
     const hasFootball = footballData.top5 && footballData.top5.length > 0;
 
@@ -57,9 +56,29 @@ export default async function handler(req, res) {
       if (footballData.patternWatch && footballData.patternWatch.length) {
         message += `\n${sep}\n\n`;
         message += `🔬 PATTERN WATCH — JOACĂ AZI\n${sep}\n`;
+
         footballData.patternWatch.forEach(t => {
           const s = t.stats;
           const side = t.isHome ? "🏠 Acasă" : "✈️ Deplasare";
+
+          // ── Concluzie automată ──
+          let concluzie = "";
+          const outsider = t.isHome ? t.opponent : t.name;
+
+          if (s.winPct <= 20 && s.topHtftCode?.includes("L")) {
+            concluzie = `Formă slabă. ${outsider} favorit. Pariu logic: ${t.isHome ? "X2" : "1X"} + Under 3.5`;
+          } else if (s.winPct >= 60 && s.over25Pct >= 60) {
+            concluzie = `Formă bună + atac activ. Pariu logic: ${t.isHome ? "1X" : "X2"} + Over 2.5`;
+          } else if (s.bttsPct >= 60 && s.over25Pct >= 55) {
+            concluzie = `Ambele echipe marchează frecvent. Pariu logic: BTTS + Over 2.5`;
+          } else if (s.under35Pct >= 65 && s.bttsPct <= 35) {
+            concluzie = `Meciuri închise, puține goluri. Pariu logic: Under 2.5`;
+          } else if (s.over25Pct >= 65) {
+            concluzie = `Meciuri cu multe goluri. Pariu logic: Over 2.5`;
+          } else {
+            concluzie = `Pattern neconcludent. Evită pariul pe acest meci.`;
+          }
+
           message += `\n📍 ${t.name} (${t.country})\n`;
           message += `   ${side} vs ${t.opponent}\n`;
           message += `   🏆 ${t.league}\n`;
@@ -67,6 +86,7 @@ export default async function handler(req, res) {
           message += `   📊 Pattern dominant: ${t.topSignal?.label} ${t.topSignal?.val}%\n`;
           message += `   Over2.5: ${s.over25Pct}% | BTTS: ${s.bttsPct}% | Win: ${s.winPct}%\n`;
           message += `   HT/FT: ${s.topHtftCode||"-"} (${s.topHtftPct}%) | Gol R2: ${s.score2HPct}%\n`;
+          message += `   💡 ${concluzie}\n`;
         });
       }
 
@@ -138,7 +158,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    lastSentDate = null; // resetăm dacă a fost eroare ca să poată reîncerca
+    lastSentDate = null;
     return res.status(500).json({ error: err.message });
   }
 }
