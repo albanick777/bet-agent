@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         const nbaData = await buildNBAReport(apiKey);
 
         if (nbaData.picks && nbaData.picks.length > 0) {
-          message += `🏀 NBA TOP PICKS (≥75%)\n${sep}\n`;
+          message += `🏀 NBA TOP PICKS (≥80%)\n${sep}\n`;
           nbaData.picks.forEach((p, i) => {
             message += `\n${i + 1}. ${p.match}\n`;
             message += `   🕒 ${p.kickoffLocal} Georgia | ${p.kickoffUTC} UTC\n`;
