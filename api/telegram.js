@@ -1,7 +1,18 @@
 import { buildEliteReport } from "../lib/buildReport.js";
 import { buildNBAReport } from "../lib/buildNBAReport.js";
 
+// Guard anti-duplicat — o singură trimitere per zi
+let lastSentDate = null;
+
 export default async function handler(req, res) {
+  const todayDate = new Date().toISOString().slice(0, 10);
+
+  if (lastSentDate === todayDate) {
+    return res.status(200).json({ status: "ALREADY_SENT", date: todayDate });
+  }
+
+  lastSentDate = todayDate;
+
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -20,7 +31,6 @@ export default async function handler(req, res) {
     let message = "";
 
     if (hasFootball) {
-      // ── MESAJ FOTBAL ────────────────────────────────────────────────────
       function formatPick(p, i) {
         return [
           `${i + 1}. ${p.match}`,
@@ -44,7 +54,6 @@ export default async function handler(req, res) {
         message += `\n${formatPick(p, i)}\n`;
       });
 
-      // Pattern Watch
       if (footballData.patternWatch && footballData.patternWatch.length) {
         message += `\n${sep}\n\n`;
         message += `🔬 PATTERN WATCH — JOACĂ AZI\n${sep}\n`;
@@ -62,16 +71,14 @@ export default async function handler(req, res) {
       }
 
     } else {
-      // ── TRANZIȚIE MESAJ ─────────────────────────────────────────────────
       message += `🏆 TOP BET — DAILY PREDICTIONS\n`;
       message += `${sep}\n`;
       message += `📅 ${footballData.date} | UTC: ${footballData.hourUTC}:00\n`;
       message += `${sep}\n\n`;
-      message += `⚽ No European football predictions ≥75% today.\n`;
+      message += `⚽ No European football predictions ≥80% today.\n`;
       message += `🏀 Switching to NBA — Top predictions below.\n\n`;
       message += `${sep}\n\n`;
 
-      // ── NBA FALLBACK ────────────────────────────────────────────────────
       try {
         const nbaData = await buildNBAReport(apiKey);
 
@@ -86,7 +93,7 @@ export default async function handler(req, res) {
           });
         } else {
           message += `🏀 NBA\n`;
-          message += `No NBA predictions ≥75% today either.\n`;
+          message += `No NBA predictions ≥80% today either.\n`;
           message += `📅 Next European football: check back tomorrow.\n`;
         }
       } catch (nbaErr) {
@@ -131,6 +138,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
+    lastSentDate = null; // resetăm dacă a fost eroare ca să poată reîncerca
     return res.status(500).json({ error: err.message });
   }
 }
