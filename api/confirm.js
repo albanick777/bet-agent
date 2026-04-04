@@ -20,8 +20,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ skipped: true, reason: "No picks saved today" });
     }
 
-    const savedPicks = JSON.parse(kvData.result);
-    if (!savedPicks || savedPicks.length === 0) {
+   let savedPicks;
+try {
+  const parsed = JSON.parse(kvData.result);
+  savedPicks = Array.isArray(parsed) ? parsed : JSON.parse(parsed);
+} catch(e) {
+  return res.status(200).json({ skipped: true, reason: "Invalid picks format", raw: kvData.result });
+}
+if (!savedPicks || savedPicks.length === 0) {
       return res.status(200).json({ skipped: true, reason: "Empty picks" });
     }
 
