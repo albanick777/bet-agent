@@ -1,14 +1,13 @@
 import { buildEliteReport } from "../lib/buildReport.js";
 import { buildNBAReport } from "../lib/buildNBAReport.js";
+import { getPatternPicks } from "../lib/patternHtft.js";
 
 let lastSentDate = null;
 
 export default async function handler(req, res) {
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  const force = req.query?.force === "true";
-
-  if (lastSentDate === todayDate && !force) {
+  if (lastSentDate === todayDate) {
     return res.status(200).json({ status: "ALREADY_SENT", date: todayDate });
   }
 
@@ -55,7 +54,7 @@ export default async function handler(req, res) {
         message += `\n${formatPick(p, i)}\n`;
       });
 
-      // ── ACUMULATOR SUGERAT ──────────────────────────────────────────────
+      // ── ACUMULATOR ──────────────────────────────────────────────────────
       const acc = footballData.accumulatorSuggestion;
       if (acc && acc.picks.length >= 2) {
         message += `\n${sep}\n\n`;
@@ -70,7 +69,7 @@ export default async function handler(req, res) {
         message += `\n💡 Cu cât mai puține selecții, cu atât mai sigur.\n`;
       }
 
-      // ── PATTERN WATCH ───────────────────────────────────────────────────
+      // ── PATTERN WATCH ────────────────────────────────────────────────────
       if (footballData.patternWatch && footballData.patternWatch.length) {
         message += `\n${sep}\n\n`;
         message += `🔬 PATTERN WATCH — JOACĂ AZI\n${sep}\n`;
@@ -130,9 +129,77 @@ export default async function handler(req, res) {
           message += `🏀 NBA\nNo NBA predictions ≥80% today either.\n`;
           message += `📅 Next European football: check back tomorrow.\n`;
         }
-      } catch (nbaErr) {
+      } catch(nbaErr) {
         message += `🏀 NBA data unavailable today.\n`;
         message += `📅 Check back tomorrow for European football.\n`;
+      }
+    }
+
+    // ── PATTERN HT/FT ────────────────────────────────────────────────────
+    try {
+      const patternPicks = await getPatternPicks(apiKey, kvUrl, kvToken);
+      if (patternPicks && patternPicks.length > 0) {
+        message += `\n${sep}\n\n`;
+        message += `🔁 PATTERN HT/FT — PICKS AZI\n${sep}\n`;
+        patternPicks.forEach((t, i) => {
+          message += `\n${i + 1}. ${t.teamName}\n`;
+          message += `   ⚔️ vs ${t.opponent} | ${t.side}\n`;
+          message += `   🏆 ${t.league} | ${t.country}\n`;
+          message += `   🕒 ${t.kickoffLocal} local | ${t.kickoffUTC} UTC\n`;
+          message += `   📊 Pattern: ${t.pattern}\n`;
+          message += `   📈 Frecvență: ${t.patternPct}% (${t.patternCount}/${t.totalMatches} meciuri)\n`;
+        });
+        message += `\n⚠️ Alegerea finală vă aparține.\n`;
+      }
+    } catch(patternErr) {
+      console.error("Pattern HT/FT error:", patternErr.message);
+    }
+
+    // ── TRACKING PICKS ────────────────────────────────────────────────────
+    if (kvUrl && kvToken && hasFootball && footballData.top5?.length > 0) {
+      try {
+        const picksToSave = footballData.top5.map(p => ({
+          match: p.match,
+          market: p.market,
+          confidence: p.confidence,
+          kickoffUTC: p.kickoffUTC,
+          league: p.league,
+          date: todayDate,
+          result: null // se completează manual sau prin api/results.js
+        }));
+
+        await fetch(`${kvUrl}/set/daily_picks`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${kvToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ value: JSON.stringify(picksToSave), ex: 86400 })
+        });
+
+        // Adaugă în istoric lunar
+        const monthKey = `picks_history_${todayDate.slice(0, 7)}`;
+        const historyRes = await fetch(`${kvUrl}/get/${monthKey}`, {
+          headers: { Authorization: `Bearer ${kvToken}` }
+        });
+        const historyData = await historyRes.json();
+        let history = [];
+        if (historyData?.result) {
+          try { history = JSON.parse(JSON.parse(historyData.result).value || "[]"); } catch(e) {}
+        }
+        history.push(...picksToSave);
+
+        await fetch(`${kvUrl}/set/${monthKey}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${kvToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ value: JSON.stringify(history) })
+        });
+
+      } catch(kvErr) {
+        console.error("KV save error:", kvErr.message);
       }
     }
 
@@ -164,31 +231,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── SALVARE PICKS ÎN KV ─────────────────────────────────────────────
-    if (kvUrl && kvToken && hasFootball && footballData.top5?.length > 0) {
-      try {
-        const picksToSave = footballData.top5.map(p => ({
-          match: p.match,
-          market: p.market,
-          confidence: p.confidence,
-          kickoffUTC: p.kickoffUTC,
-          league: p.league,
-          fixtureId: p.fixtureId || null
-        }));
-
-        await fetch(`${kvUrl}/set/daily_picks`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${kvToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ value: JSON.stringify(picksToSave), ex: 86400 })
-        });
-      } catch (kvErr) {
-        console.error("KV save error:", kvErr.message);
-      }
-    }
-
     return res.status(200).json({
       success: true,
       sport: hasFootball ? "football" : "nba",
@@ -196,7 +238,7 @@ export default async function handler(req, res) {
       picks: hasFootball ? footballData.top5?.length : 0
     });
 
-  } catch (err) {
+  } catch(err) {
     lastSentDate = null;
     return res.status(500).json({ error: err.message });
   }
