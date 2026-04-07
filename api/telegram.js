@@ -7,11 +7,12 @@ let lastSentDate = null;
 export default async function handler(req, res) {
   const todayDate = new Date().toISOString().slice(0, 10);
 
-const force = req.query?.force === "true";
-  if (lastSentDate === todayDate && !force) {
+  if (lastSentDate === todayDate) {
     return res.status(200).json({ status: "ALREADY_SENT", date: todayDate });
   }
+
   lastSentDate = todayDate;
+
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -72,13 +73,11 @@ const force = req.query?.force === "true";
       if (footballData.patternWatch && footballData.patternWatch.length) {
         message += `\n${sep}\n\n`;
         message += `🔬 PATTERN WATCH — JOACĂ AZI\n${sep}\n`;
-
         footballData.patternWatch.forEach(t => {
           const s = t.stats;
           const side = t.isHome ? "🏠 Acasă" : "✈️ Deplasare";
           let concluzie = "";
           const outsider = t.isHome ? t.opponent : t.name;
-
           if (s.winPct <= 20 && s.topHtftCode?.includes("L")) {
             concluzie = `Formă slabă. ${outsider} favorit. Pariu logic: ${t.isHome ? "X2" : "1X"} + Under 3.5`;
           } else if (s.winPct >= 60 && s.over25Pct >= 60) {
@@ -92,7 +91,6 @@ const force = req.query?.force === "true";
           } else {
             concluzie = `Pattern neconcludent. Evită pariul pe acest meci.`;
           }
-
           message += `\n📍 ${t.name} (${t.country})\n`;
           message += `   ${side} vs ${t.opponent}\n`;
           message += `   🏆 ${t.league}\n`;
@@ -136,20 +134,22 @@ const force = req.query?.force === "true";
 
     // ── PATTERN HT/FT ────────────────────────────────────────────────────
     try {
-      const patternPicks = await getPatternPicks(apiKey, kvUrl, kvToken);
-      if (patternPicks && patternPicks.length > 0) {
-        message += `\n${sep}\n\n`;
-        message += `🔁 PATTERN HT/FT — PICKS AZI\n${sep}\n`;
-       patternPicks.forEach((t, i) => {
-  message += `\n${i + 1}. ${t.match}\n`;
-  message += `   📍 ${t.teamName} | ${t.side}\n`;
-  message += `   🏆 ${t.league} | ${t.country}\n`;
-  message += `   🕒 ${t.kickoffLocal} local | ${t.kickoffUTC} UTC\n`;
-  message += `   🔁 Pattern: ${t.pattern} — ${t.patternPct}% (${t.patternCount}/${t.totalMatches})\n`;
-  message += `   💡 ${t.explanation}\n`;
-  message += `   🎯 Pariu HT/FT recomandat: ${t.betCode}\n`;
-});
-message += `\n⚠️ Alegerea finală vă aparține.\n`;
+      if (kvUrl && kvToken) {
+        const patternPicks = await getPatternPicks(apiKey, kvUrl, kvToken);
+        if (patternPicks && patternPicks.length > 0) {
+          message += `\n${sep}\n\n`;
+          message += `🔁 PATTERN HT/FT — PICKS AZI\n${sep}\n`;
+          patternPicks.forEach((t, i) => {
+            message += `\n${i + 1}. ${t.match}\n`;
+            message += `   📍 ${t.teamName} | ${t.side}\n`;
+            message += `   🏆 ${t.league} | ${t.country}\n`;
+            message += `   🕒 ${t.kickoffLocal} local | ${t.kickoffUTC} UTC\n`;
+            message += `   🔁 Pattern: ${t.pattern} — ${t.patternPct}% (${t.patternCount}/${t.totalMatches})\n`;
+            message += `   💡 ${t.explanation}\n`;
+            message += `   🎯 Pariu HT/FT recomandat: ${t.betCode}\n`;
+          });
+          message += `\n⚠️ Alegerea finală vă aparține.\n`;
+        }
       }
     } catch(patternErr) {
       console.error("Pattern HT/FT error:", patternErr.message);
@@ -165,7 +165,7 @@ message += `\n⚠️ Alegerea finală vă aparține.\n`;
           kickoffUTC: p.kickoffUTC,
           league: p.league,
           date: todayDate,
-          result: null // se completează manual sau prin api/results.js
+          result: null
         }));
 
         await fetch(`${kvUrl}/set/daily_picks`, {
@@ -177,7 +177,7 @@ message += `\n⚠️ Alegerea finală vă aparține.\n`;
           body: JSON.stringify({ value: JSON.stringify(picksToSave), ex: 86400 })
         });
 
-        // Adaugă în istoric lunar
+        // Istoric lunar
         const monthKey = `picks_history_${todayDate.slice(0, 7)}`;
         const historyRes = await fetch(`${kvUrl}/get/${monthKey}`, {
           headers: { Authorization: `Bearer ${kvToken}` }
@@ -185,10 +185,12 @@ message += `\n⚠️ Alegerea finală vă aparține.\n`;
         const historyData = await historyRes.json();
         let history = [];
         if (historyData?.result) {
-          try { history = JSON.parse(JSON.parse(historyData.result).value || "[]"); } catch(e) {}
+          try {
+            const outer = JSON.parse(historyData.result);
+            history = JSON.parse(typeof outer.value === "string" ? outer.value : "[]");
+          } catch(e) {}
         }
         history.push(...picksToSave);
-
         await fetch(`${kvUrl}/set/${monthKey}`, {
           method: "POST",
           headers: {
@@ -197,7 +199,6 @@ message += `\n⚠️ Alegerea finală vă aparține.\n`;
           },
           body: JSON.stringify({ value: JSON.stringify(history) })
         });
-
       } catch(kvErr) {
         console.error("KV save error:", kvErr.message);
       }
@@ -206,7 +207,6 @@ message += `\n⚠️ Alegerea finală vă aparține.\n`;
     message += `\n${sep}\n`;
     message += `🧠 Nu forțăm pariuri. Focus: profit pe termen lung.`;
 
-    // Chunking
     const chunks = [];
     let current = "";
     for (const line of message.split("\n")) {
