@@ -141,15 +141,16 @@ export default async function handler(req, res) {
       if (patternPicks && patternPicks.length > 0) {
         message += `\n${sep}\n\n`;
         message += `🔁 PATTERN HT/FT — PICKS AZI\n${sep}\n`;
-        patternPicks.forEach((t, i) => {
-          message += `\n${i + 1}. ${t.teamName}\n`;
-          message += `   ⚔️ vs ${t.opponent} | ${t.side}\n`;
-          message += `   🏆 ${t.league} | ${t.country}\n`;
-          message += `   🕒 ${t.kickoffLocal} local | ${t.kickoffUTC} UTC\n`;
-          message += `   📊 Pattern: ${t.pattern}\n`;
-          message += `   📈 Frecvență: ${t.patternPct}% (${t.patternCount}/${t.totalMatches} meciuri)\n`;
-        });
-        message += `\n⚠️ Alegerea finală vă aparține.\n`;
+       patternPicks.forEach((t, i) => {
+  message += `\n${i + 1}. ${t.match}\n`;
+  message += `   📍 ${t.teamName} | ${t.side}\n`;
+  message += `   🏆 ${t.league} | ${t.country}\n`;
+  message += `   🕒 ${t.kickoffLocal} local | ${t.kickoffUTC} UTC\n`;
+  message += `   🔁 Pattern: ${t.pattern} — ${t.patternPct}% (${t.patternCount}/${t.totalMatches})\n`;
+  message += `   💡 ${t.explanation}\n`;
+  message += `   🎯 Pariu HT/FT recomandat: ${t.betCode}\n`;
+});
+message += `\n⚠️ Alegerea finală vă aparține.\n`;
       }
     } catch(patternErr) {
       console.error("Pattern HT/FT error:", patternErr.message);
