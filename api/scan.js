@@ -160,7 +160,7 @@ export default async function handler(req, res) {
         const [topCode, topCount] = sorted[0];
         const topPct = pct(topCount, n);
 
-        if (topPct >= 55) {
+        if (topPct >= 50) {
           allPatternTeams.push({
             teamId: team.id,
             teamName: team.name,
