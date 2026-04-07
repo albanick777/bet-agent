@@ -7,10 +7,11 @@ let lastSentDate = null;
 export default async function handler(req, res) {
   const todayDate = new Date().toISOString().slice(0, 10);
 
- const force = req.query?.force === "true";
-if (lastSentDate === todayDate && !force) {
+const force = req.query?.force === "true";
+  if (lastSentDate === todayDate && !force) {
+    return res.status(200).json({ status: "ALREADY_SENT", date: todayDate });
+  }
   lastSentDate = todayDate;
-
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
