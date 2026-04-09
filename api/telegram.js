@@ -7,7 +7,8 @@ let lastSentDate = null;
 export default async function handler(req, res) {
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  if (lastSentDate === todayDate) {
+  const force = req.query?.force === "true";
+if (lastSentDate === todayDate && !force) {
     return res.status(200).json({ status: "ALREADY_SENT", date: todayDate });
   }
 
